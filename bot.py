@@ -8,6 +8,8 @@ from typing import Any, Dict
 import yaml
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 
 from utils.logger import setup_logger
 from database.repository import Database
@@ -65,7 +67,7 @@ async def main():
     bot_token = cfg.get('bot', {}).get('token')
     if not bot_token or bot_token.startswith("$"):
         raise RuntimeError('TELEGRAM_BOT_TOKEN is not set')
-    bot = Bot(token=bot_token, parse_mode='HTML')
+    bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
     # MCP client
