@@ -74,7 +74,7 @@ class ReportService:
                 with open(target_path, "w", encoding="utf-8") as f:
                     f.write("IT Trends Report\n\n" + json.dumps(data, ensure_ascii=False, indent=2))
         await save_report(self.db, user_id=user_id, channel_id=None, file_path=target_path, fmt=fmt, data_json=data, status="completed")
-        return target_path
+        return target_path, data
 
     async def publish_to_channel(self, channel_id: str, report_path: str, caption: str):
         # Auto-detect by path extension

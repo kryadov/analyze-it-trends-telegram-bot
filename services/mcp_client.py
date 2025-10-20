@@ -1,8 +1,12 @@
 import asyncio
 import json
+import logging
 from typing import Any, Dict, Optional
 
 import aiohttp
+
+
+logger = logging.getLogger(__name__)
 
 
 class MCPClient:
@@ -39,10 +43,25 @@ class MCPClient:
             except Exception as e:
                 last_exc = e
                 attempt += 1
+                logger.warning(
+                    "MCP request failed (attempt %d/%d): %s %s; payload_keys=%s; error=%s",
+                    attempt,
+                    self.retry_attempts,
+                    method,
+                    url,
+                    list(json_payload.keys()) if isinstance(json_payload, dict) else None,
+                    repr(e),
+                )
                 if attempt >= self.retry_attempts:
                     break
                 await asyncio.sleep(self.retry_delay * attempt)  # simple exponential backoff
         if last_exc:
+            logger.error(
+                "MCP request failed after %d attempts: %s %s",
+                self.retry_attempts,
+                method,
+                f"{self.server_url}{path}",
+            )
             raise last_exc
 
     async def health_check(self) -> bool:
@@ -52,6 +71,7 @@ class MCPClient:
                 return data.get("status") == "ok"
             return True
         except Exception:
+            logger.warning("MCP health check failed", exc_info=True)
             return False
 
     async def analyze_trends(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -61,7 +81,7 @@ class MCPClient:
             if isinstance(result, dict):
                 return result
         except Exception:
-            pass
+            logger.exception("MCP analyze_trends failed; params=%s", params)
         # Fallback stub
         return {
             "date": params.get("date") or "today",
@@ -79,7 +99,7 @@ class MCPClient:
             if isinstance(result, dict) and "file_path" in result:
                 return result["file_path"]
         except Exception:
-            pass
+            logger.exception("MCP generate_report failed; fmt=%s", fmt)
         # Fallback: caller will create the file locally using returned hint
         return ""
 
@@ -89,5 +109,5 @@ class MCPClient:
             if isinstance(result, dict):
                 return result
         except Exception:
-            pass
+            logger.exception("MCP get_historical_data failed; technology=%s", technology)
         return {"technology": technology, "history": []}

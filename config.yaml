@@ -1,7 +1,7 @@
 bot:
   token: "${TELEGRAM_BOT_TOKEN}"
   admin_users:
-    - 123456789
+    - 274609665
   allowed_users: []
   max_users: 100
 
