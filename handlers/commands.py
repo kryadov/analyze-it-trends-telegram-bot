@@ -44,7 +44,7 @@ async def cmd_start(message: Message):
         "🔮 Прогнозировать спрос на IT-услуги\n\n"
         "Выбери действие ниже или используй команды:\n"
         "/analyze — запустить анализ вручную\n"
-        "/set_channel <@username|id> — указать канал для публикации\n"
+        "/set_channel @username или id — указать канал для публикации\n"
         "/get_channel — показать текущий канал"
     )
     await message.answer(text, reply_markup=main_menu_keyboard())
@@ -56,7 +56,7 @@ async def cmd_get_channel(message: Message):
     if ch:
         await message.answer(f"📢 Текущий канал: {ch.channel_username or ch.channel_id}")
     else:
-        await message.answer("Канал не настроен. Используй: /set_channel <@channel_username или channel_id>")
+        await message.answer("Канал не настроен. Используй: /set_channel @channel_username или channel_id")
 
 
 @router.message(Command(commands=["set_channel"]))
@@ -65,7 +65,7 @@ async def cmd_set_channel(message: Message):
         return
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
-        await message.answer("Укажи канал: /set_channel <@username или id>")
+        await message.answer("Укажи канал: /set_channel @username или id")
         return
     raw = parts[1].strip()
 
@@ -109,7 +109,7 @@ async def cmd_analyze(message: Message):
     # Ensure channel is configured
     ch = await get_active_channel(container.db, message.from_user.id)
     if not ch:
-        await message.answer("Сначала укажи канал публикации: /set_channel <@username или id>")
+        await message.answer("Сначала укажи канал публикации: /set_channel @username или id")
         return
 
     params = _parse_analyze_args(message.text or "")

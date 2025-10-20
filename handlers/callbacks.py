@@ -14,7 +14,7 @@ async def on_run_analysis(cb: CallbackQuery):
     # Reuse analyze flow with defaults
     ch = await get_active_channel(container.db, cb.from_user.id)
     if not ch:
-        await cb.message.answer("Сначала укажи канал публикации: /set_channel <@username или id>")
+        await cb.message.answer("Сначала укажи канал публикации: /set_channel @username или id")
         return
 
     msg = await cb.message.answer("⏳ Запускаю анализ...")

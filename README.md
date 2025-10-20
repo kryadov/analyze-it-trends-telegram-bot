@@ -65,7 +65,7 @@ The bot uses long polling. For production you can configure a webhook (see below
 - /start — greeting, menu
 - /analyze [--days N] [--format pdf|excel|html] — start the analysis
 - /report — alias for /analyze
-- /set_channel <@username|id> — set the channel for publishing
+- /set_channel @username or id — set the channel for publishing
 - /get_channel — show the current channel
 
 Example:
