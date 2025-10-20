@@ -7,9 +7,9 @@ from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
-from ..keyboards.inline import main_menu_keyboard
-from ..services import container
-from ..database.repository import get_or_create_user, get_active_channel, set_channel
+from keyboards.inline import main_menu_keyboard
+from services import container
+from database.repository import get_or_create_user, get_active_channel, set_channel
 
 router = Router()
 

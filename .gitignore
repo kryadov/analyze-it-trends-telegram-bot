@@ -56,6 +56,7 @@ dmypy.json
 venv/
 env/
 ENV/
+.env
 .conda/
 pythonenv*
 .Python

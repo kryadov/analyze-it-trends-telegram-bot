@@ -1,10 +1,10 @@
 # IT Trends Telegram Bot
 
-Асинхронный Telegram-бот на aiogram 3 для анализа IT-трендов через MCP-сервер и автоматической публикации отчетов в канал.
+An asynchronous Telegram bot built with aiogram 3 to analyze IT trends via an MCP server and automatically publish reports to a channel.
 
-## Быстрый старт
+## Quick Start
 
-1. Клонируйте репозиторий и установите зависимости:
+1. Clone the repository and install dependencies (Python 3.13):
 
 ```bash
 python -m venv .venv
@@ -12,63 +12,92 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-2. Настройте переменные окружения:
+2. Configure environment variables:
 
-- Скопируйте `.env.example` в `.env` и укажите значения
-- TELEGRAM_BOT_TOKEN — токен бота от @BotFather
-- ADMIN_CHAT_ID — ID чата админа (для уведомлений об ошибках)
+- Copy `.env.example` to `.env` and set the values
+- TELEGRAM_BOT_TOKEN — bot token from @BotFather
+- ADMIN_CHAT_ID — admin chat ID (for error notifications)
 
-3. Настройте конфиг `config.yaml` при необходимости:
-- URL MCP-сервера
-- Путь к БД (по умолчанию SQLite `./data/bot.db`)
-- Настройки планировщика и логирования
+3. Adjust the `config.yaml` if needed:
+- MCP server URL
+- Database path (SQLite `./data/bot.db` by default)
+- Scheduler and logging settings
 
-4. Запуск:
+4. Run:
 
 ```bash
 python bot.py
 ```
 
-Бот использует long polling. Для продакшена можно настроить webhook (см. ниже).
+The bot uses long polling. For production you can configure a webhook (see below).
 
-## Команды
+## Create a Telegram bot with BotFather
 
-- /start — приветствие, меню
-- /analyze [--days N] [--format pdf|excel|html] — запустить анализ
-- /report — алиас команды /analyze
-- /set_channel <@username|id> — указать канал для публикации
-- /get_channel — показать текущий канал
+- Open Telegram and start a chat with @BotFather
+- Send /start
+- Send /newbot and follow the prompts:
+  - Bot name: any display name (can be changed later)
+  - Username: must be unique and end with "bot" (e.g., it_trends_bot)
+- BotFather will send you an HTTP API token — copy it and put it into your .env as:
+  - TELEGRAM_BOT_TOKEN=YOUR_TOKEN
+- Recommended BotFather settings (optional but useful):
+  - /setuserpic — set the bot avatar
+  - /setdescription — short description
+  - /setabouttext — about text
+  - /setcommands — register commands for better UX in clients. Example:
+    start - Start the bot
+    analyze - Analyze IT trends
+    report - Alias for analyze
+    set_channel - Set the publish channel
+    get_channel - Show current channel
+- Add the bot to your channel (to allow publishing):
+  - Open the channel → Administrators → Add Admin → choose your bot
+  - Grant at least "Post Messages" permission
+  - In Telegram, run /set_channel in the bot chat and provide the channel @username or ID
+- Get your admin chat ID (for ADMIN_CHAT_ID in .env):
+  - Send a message to @userinfobot or @getidsbot and copy your ID, or
+  - Temporarily add a handler to print chat.id (advanced)
+- Security tips:
+  - Keep the token secret. If compromised, go to @BotFather → /revoke to regenerate
 
-Пример:
+## Commands
+
+- /start — greeting, menu
+- /analyze [--days N] [--format pdf|excel|html] — start the analysis
+- /report — alias for /analyze
+- /set_channel <@username|id> — set the channel for publishing
+- /get_channel — show the current channel
+
+Example:
 
 ```
 /analyze --days 7 --format pdf
 ```
 
-## Подключение к MCP-серверу
+## MCP Server Connection
 
-- URL MCP-сервера задается в `config.yaml` (mcp_server.url).
-- При недоступности MCP возвращаются заглушки данных и создается простой файл отчета локально.
+- The MCP server URL is set in `config.yaml` (mcp_server.url).
+- If the MCP server is unavailable, stub data will be returned and a simple report file will be created locally.
 
-## Планировщик
+## Scheduler
 
-Используется APScheduler (AsyncIOScheduler). Базовый скелет реализован, добавление/управление заданиями через команды будет добавлено позже.
+APScheduler (AsyncIOScheduler) is used. A basic skeleton is implemented; adding/managing jobs via commands will be added later.
 
-## База данных
+## Database
 
-- SQLAlchemy 2.0 + aiosqlite по умолчанию
-- Таблицы: users, channels, schedules, reports, user_settings
+- SQLAlchemy 2.0 + aiosqlite by default
+- Tables: users, channels, schedules, reports, user_settings
 
-## Логирование
+## Logging
 
-- Ротация логов
-- Отдельный лог для ошибок `logs/errors.log`
+- Log rotation
+- Separate error log `logs/errors.log`
 
-## Развертывание
+## Deployment
 
 ### systemd (Linux)
 
-Пример unit-файла `/etc/systemd/system/it-trends-bot.service`:
+Example unit file `/etc/systemd/system/it-trends-bot.service`:
 
 ```
 [Unit]
@@ -95,7 +124,7 @@ sudo systemctl start it-trends-bot
 
 ### Docker
 
-Dockerfile (упрощенный, пример):
+Dockerfile (simplified example):
 
 ```
 FROM python:3.11-slim
@@ -106,30 +135,30 @@ COPY . .
 CMD ["python", "bot.py"]
 ```
 
-Запуск:
+Run:
 
 ```
 docker build -t it-trends-bot .
 docker run --env-file .env -v %cd%/data:/app/data -v %cd%/logs:/app/logs -v %cd%/reports:/app/reports it-trends-bot
 ```
 
-### Webhook (альтернатива polling)
+### Webhook (alternative to polling)
 
-Aiogram 3 поддерживает вебхуки, но в данном базовом варианте используется polling. Для включения вебхуков потребуется настроить внешний URL и TLS/Reverse Proxy, а также изменить запуск в bot.py.
+Aiogram 3 supports webhooks, but this basic setup uses polling. To enable webhooks, you will need to configure an external URL and TLS/Reverse Proxy, and also adjust the startup in bot.py.
 
-### Миграции БД
+### DB Migrations
 
-- Alembic включен в зависимости. В базовой версии миграции не настроены. Можно инициализировать позднее: `alembic init migrations` и настроить `sqlalchemy.url`.
+- Alembic is included in the dependencies. In the base version, migrations are not configured. You can initialize later: `alembic init migrations` and configure `sqlalchemy.url`.
 
-## FAQ и Troubleshooting
+## FAQ and Troubleshooting
 
-- Бот не публикует в канал — убедитесь, что добавили бота администратором канала с правами публикации.
-- MCP недоступен — данные будут взяты из заглушек, проверьте URL в конфиге и сетевую доступность.
-- Ошибка запуска — проверьте наличие TELEGRAM_BOT_TOKEN в .env.
+- The bot does not publish to the channel — make sure you added the bot as a channel administrator with publishing rights.
+- MCP is unavailable — stub data will be used; check the URL in the config and network connectivity.
+- Startup error — make sure TELEGRAM_BOT_TOKEN is present in .env.
 
-## Дальнейший план
+## Roadmap
 
-- Добавить команды управления расписаниями (/schedule, /schedule_list и пр.)
-- Добавить меню настроек и обработку inline-кнопок
-- Расширить ReportService и интеграцию с MCP
-- Добавить health-check MCP по расписанию и уведомления админам
+- Add schedule management commands (/schedule, /schedule_list, etc.)
+- Add a settings menu and handle inline buttons
+- Expand ReportService and integration with MCP
+- Add MCP health-check on a schedule and admin notifications

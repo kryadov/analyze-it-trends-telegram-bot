@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, Tuple
 from aiogram import Bot
 
 from .mcp_client import MCPClient
-from ..database.repository import Database, get_active_channel, get_user_settings, save_report
+from database.repository import Database, get_active_channel, get_user_settings, save_report
 
 
 class ReportService:

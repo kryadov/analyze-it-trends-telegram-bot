@@ -73,7 +73,7 @@ class TrendsScheduler:
             path, data = await container.report_service.create_report(user_id, {"days": 7})
             caption = container.report_service.format_caption(data)
             # Get user channel
-            from ..database.repository import get_active_channel
+            from database.repository import get_active_channel
             ch = await get_active_channel(container.db, user_id)
             if not ch:
                 await container.bot.send_message(chat_id, "⚠️ Канал не настроен, пропускаю публикацию.")
