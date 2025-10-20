@@ -1,0 +1,48 @@
+bot:
+  token: "${TELEGRAM_BOT_TOKEN}"
+  admin_users:
+    - 123456789
+  allowed_users: []
+  max_users: 100
+
+mcp_server:
+  url: "http://localhost:8080"
+  timeout: 300
+  retry_attempts: 3
+  retry_delay: 5
+
+database:
+  type: "sqlite"
+  path: "./data/bot.db"
+  # Or for PostgreSQL:
+  # connection_string: "${DATABASE_URL}"
+
+scheduler:
+  timezone: "UTC"
+  max_jobs_per_user: 5
+
+reports:
+  storage_path: "./reports"
+  max_storage_days: 30
+  default_format: "pdf"
+  caption_template: |
+    📊 IT Trends Report - {date}
+
+    🔥 Top Trends:
+    {top_trends}
+
+    📈 Growth Leaders:
+    {growth_leaders}
+
+    #ITTrends #Analytics #TechReport
+
+notifications:
+  notify_on_completion: true
+  notify_on_error: true
+  error_chat_id: ${ADMIN_CHAT_ID}
+
+logging:
+  level: "INFO"
+  file: "./logs/bot.log"
+  max_size_mb: 10
+  backup_count: 5
