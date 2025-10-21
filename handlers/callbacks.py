@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
@@ -6,6 +7,7 @@ from services import container
 from database.repository import get_active_channel
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "run_analysis")
@@ -23,5 +25,6 @@ async def on_run_analysis(cb: CallbackQuery):
         caption = container.report_service.format_caption(data)
         await container.report_service.publish_to_channel(ch.channel_id, path, caption)
         await cb.message.answer(f"✅ Отчет опубликован в {ch.channel_username or ch.channel_id}")
-    except Exception:
+    except Exception as e:
+        logger.exception("Callback run_analysis failed. user_id=%s chat_id=%s", cb.from_user.id, cb.message.chat.id)
         await cb.message.answer("❗ Ошибка при генерации отчета. Попробуй позже.")

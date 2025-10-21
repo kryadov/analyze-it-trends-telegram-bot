@@ -1,6 +1,7 @@
 import asyncio
 import re
 import time
+import logging
 from typing import Optional, Dict, Any
 
 from aiogram import Router, F
@@ -12,6 +13,7 @@ from services import container
 from database.repository import get_or_create_user, get_active_channel, set_channel
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 # Simple in-memory rate limiter: one analysis per user per 10 minutes
 _LAST_ANALYZE_AT: dict[int, float] = {}
@@ -131,6 +133,10 @@ async def cmd_analyze(message: Message):
         await container.bot.send_message(message.chat.id, f"✅ Отчет опубликован в {ch.channel_username or ch.channel_id}")
         _LAST_ANALYZE_AT[message.from_user.id] = time.time()
     except Exception as e:
+        logger.exception(
+            "Error during report generation. user_id=%s chat_id=%s params=%s", 
+            message.from_user.id, message.chat.id, params
+        )
         await container.bot.edit_message_text(chat_id=message.chat.id, message_id=msg_id, text="❗ Ошибка при генерации отчета.")
         await message.answer("Попробуй позже или сообщи администратору.")
         raise
