@@ -1,3 +1,4 @@
+fastmcp>=2.12.5
 aiogram>=3.3.0
 # Or if you prefer python-telegram-bot:
 # python-telegram-bot>=20.7

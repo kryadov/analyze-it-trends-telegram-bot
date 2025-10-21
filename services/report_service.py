@@ -6,12 +6,12 @@ from typing import Dict, Any, Optional, Tuple
 
 from aiogram import Bot
 
-from .mcp_client import MCPClient
+from fastmcp.client import Client as FastMCPClient
 from database.repository import Database, get_active_channel, get_user_settings, save_report
 
 
 class ReportService:
-    def __init__(self, bot: Bot, db: Database, mcp: MCPClient, storage_path: str, caption_template: str):
+    def __init__(self, bot: Bot, db: Database, mcp: FastMCPClient, storage_path: str, caption_template: str):
         self.bot = bot
         self.db = db
         self.mcp = mcp
@@ -45,10 +45,75 @@ class ReportService:
         caption = self.caption_template.format(date=date_str, top_trends=top_trends_str, growth_leaders=growth_str)
         return caption
 
+    async def _call_tool_with_retries(self, tool_name: str, args: Dict[str, Any]) -> Any:
+        attempt = 0
+        last_exc: Optional[Exception] = None
+        while attempt < 3:
+            try:
+                return await self.mcp.call_tool(tool_name, args)
+            except Exception as e:
+                last_exc = e
+                attempt += 1
+                await asyncio.sleep(2 * attempt)
+        if last_exc:
+            raise last_exc
+
+    async def _analyze_trends(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        candidate_tools = [
+            "analyze_trends",
+            "analyze",
+            "trends_analyze",
+        ]
+        for name in candidate_tools:
+            try:
+                result = await self._call_tool_with_retries(name, params)
+                if isinstance(result, dict):
+                    return result
+                if isinstance(result, str):
+                    try:
+                        parsed = json.loads(result)
+                        if isinstance(parsed, dict):
+                            return parsed
+                    except Exception:
+                        pass
+            except Exception:
+                continue
+        # Fallback stub
+        return {
+            "date": params.get("date") or "today",
+            "top_trends": ["AI Agents", "Rust", "Kotlin Multiplatform"],
+            "growth_leaders": ["LangChain", "WebGPU", "Bun"],
+            "sources": params.get("sources", {"reddit": True, "freelance": True, "trends": True}),
+            "summary": "Stub analysis due to MCP server unavailability.",
+        }
+
+    async def _generate_report(self, data: Dict[str, Any], fmt: str) -> str:
+        payload = {"data": data, "format": fmt}
+        candidate_tools = [
+            "generate_report",
+            "report_generate",
+            "create_report",
+        ]
+        for name in candidate_tools:
+            try:
+                result = await self._call_tool_with_retries(name, payload)
+                if isinstance(result, dict) and "file_path" in result:
+                    return str(result["file_path"])
+                if isinstance(result, str):
+                    try:
+                        parsed = json.loads(result)
+                        if isinstance(parsed, dict) and "file_path" in parsed:
+                            return str(parsed["file_path"])
+                    except Exception:
+                        pass
+            except Exception:
+                continue
+        return ""
+
     async def create_report(self, user_id: int, params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
         settings = await get_user_settings(self.db, user_id)
         fmt = params.get("format") or settings.report_format or "pdf"
-        data = await self.mcp.analyze_trends(
+        data = await self._analyze_trends(
             {
                 "days": params.get("days", settings.analysis_days),
                 "sources": params.get(
@@ -62,7 +127,7 @@ class ReportService:
             }
         )
         # Try to let MCP generate the file
-        target_path = await self.mcp.generate_report(data, fmt)
+        target_path = await self._generate_report(data, fmt)
         if not target_path:
             # Fallback: generate simple file locally
             filename = f"report_{user_id}_{int(dt.datetime.utcnow().timestamp())}.{fmt if fmt != 'excel' else 'xlsx'}"

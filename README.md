@@ -76,6 +76,8 @@ Example:
 
 ## MCP Server Connection
 
+- Uses the standard fastmcp Client with StreamableHttpTransport to connect to the MCP server at http://localhost:8080 by default.
+- The legacy services.mcp_client and the MCPClient adapter class have been removed; the bot now uses FastMCPClient directly.
 - The MCP server URL is set in `config.yaml` (mcp_server.url).
 - If the MCP server is unavailable, stub data will be returned and a simple report file will be created locally.
 

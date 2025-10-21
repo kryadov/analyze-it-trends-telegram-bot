@@ -13,7 +13,8 @@ from aiogram.enums import ParseMode
 
 from utils.logger import setup_logger
 from database.repository import Database
-from services.mcp_client import MCPClient
+from fastmcp.client import Client as FastMCPClient
+from fastmcp.client.transports import StreamableHttpTransport
 from services.report_service import ReportService
 from services.scheduler import TrendsScheduler
 from services import container
@@ -70,11 +71,19 @@ async def main():
     bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
-    # MCP client
+    # MCP client (standard fastmcp)
     mcp_cfg = cfg.get('mcp_server', {})
-    mcp = MCPClient(server_url=mcp_cfg.get('url', 'http://localhost:8080'), timeout=int(mcp_cfg.get('timeout', 300)), retry_attempts=int(mcp_cfg.get('retry_attempts', 3)), retry_delay=int(mcp_cfg.get('retry_delay', 5)))
-    await mcp.connect()
-    healthy = await mcp.health_check()
+    transport = StreamableHttpTransport(url=mcp_cfg.get('url', 'http://localhost:8080'))
+    mcp = FastMCPClient(transport)
+    # enter persistent session
+    await mcp.__aenter__()
+    # health check via list_tools
+    healthy = True
+    try:
+        tools = await mcp.list_tools()
+        healthy = isinstance(tools, list)
+    except Exception:
+        healthy = False
     if healthy:
         logging.info('MCP server is healthy')
     else:
@@ -117,7 +126,7 @@ async def main():
             trends_scheduler.shutdown()
         except Exception:
             pass
-        await mcp.close()
+        await mcp.__aexit__(None, None, None)
         await db.dispose()
         await bot.session.close()
 
