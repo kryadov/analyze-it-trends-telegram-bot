@@ -19,6 +19,11 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
+def utcnow() -> dt.datetime:
+    """Return a timezone-aware UTC datetime for use as SQLAlchemy default."""
+    return dt.datetime.now(dt.timezone.utc)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -26,8 +31,8 @@ class User(Base):
     username = Column(String(255), nullable=True)
     first_name = Column(String(255), nullable=True)
     is_admin = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
-    last_active = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    last_active = Column(DateTime, default=utcnow)
 
     channels = relationship("Channel", back_populates="user", cascade="all, delete-orphan")
     schedules = relationship("Schedule", back_populates="user", cascade="all, delete-orphan")
@@ -43,7 +48,7 @@ class Channel(Base):
     channel_id = Column(String(64), nullable=False)  # can hold numeric ID or @username
     channel_username = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
-    added_at = Column(DateTime, default=dt.datetime.utcnow)
+    added_at = Column(DateTime, default=utcnow)
 
     user = relationship("User", back_populates="channels")
     schedules = relationship("Schedule", back_populates="channel")
@@ -59,7 +64,7 @@ class Schedule(Base):
     cron_expression = Column(String(255), nullable=False)
     timezone = Column(String(64), default="UTC")
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     user = relationship("User", back_populates="schedules")
     channel = relationship("Channel", back_populates="schedules")
@@ -74,7 +79,7 @@ class Report(Base):
     file_path = Column(String(1024), nullable=False)
     format = Column(String(32), default="pdf")
     data_json = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     status = Column(String(32), default="pending")  # pending/completed/failed
 
     user = relationship("User", back_populates="reports")

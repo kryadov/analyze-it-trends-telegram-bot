@@ -19,6 +19,58 @@ class ReportService:
         self.caption_template = caption_template
         os.makedirs(self.storage_path, exist_ok=True)
 
+    def _unwrap_tool_result(self, result: Any) -> Any:
+        """Normalize fastmcp Client.call_tool return into a Python type we can use.
+
+        - If it's the CallToolResult dataclass, prefer .data, else .structured_content,
+          else try to extract text from .content.
+        - If it's already a primitive/dict/str, return as-is.
+        """
+        # Already a basic type
+        if isinstance(result, (dict, str, list)):
+            return result
+
+        # Duck-typing for CallToolResult
+        if hasattr(result, "data") or hasattr(result, "structured_content") or hasattr(result, "content"):
+            data = getattr(result, "data", None)
+            if data is not None:
+                # Convert common structured objects to dict
+                try:
+                    if isinstance(data, dict):
+                        return data
+                    if hasattr(data, "model_dump"):
+                        return data.model_dump()  # pydantic v2
+                    if hasattr(data, "dict"):
+                        return data.dict()  # pydantic v1
+                    if hasattr(data, "__dict__"):
+                        return dict(data.__dict__)
+                except Exception:
+                    pass
+                return data
+
+            structured = getattr(result, "structured_content", None)
+            if structured is not None:
+                return structured
+
+            # Fallback to textual content
+            content = getattr(result, "content", None)
+            if isinstance(content, list) and content:
+                # Attempt to join text blocks
+                texts: list[str] = []
+                for block in content:
+                    text = getattr(block, "text", None)
+                    if isinstance(text, str):
+                        texts.append(text)
+                if texts:
+                    combined = "\n".join(texts)
+                    try:
+                        parsed = json.loads(combined)
+                        return parsed
+                    except Exception:
+                        return combined
+
+        return result
+
     async def send_progress_updates(self, chat_id: int, stage: str, message_id: Optional[int] = None) -> int:
         stages_map = {
             "start": "⏳ Запускаю анализ...",
@@ -37,7 +89,7 @@ class ReportService:
             return msg.message_id
 
     def format_caption(self, data: Dict[str, Any]) -> str:
-        date_str = dt.datetime.utcnow().strftime("%Y-%m-%d")
+        date_str = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
         top_trends = data.get("top_trends", [])
         growth = data.get("growth_leaders", [])
         top_trends_str = "\n".join([f"• {t}" for t in top_trends[:3]]) or "—"
@@ -67,11 +119,12 @@ class ReportService:
         for name in candidate_tools:
             try:
                 result = await self._call_tool_with_retries(name, params)
-                if isinstance(result, dict):
-                    return result
-                if isinstance(result, str):
+                unwrapped = self._unwrap_tool_result(result)
+                if isinstance(unwrapped, dict):
+                    return unwrapped
+                if isinstance(unwrapped, str):
                     try:
-                        parsed = json.loads(result)
+                        parsed = json.loads(unwrapped)
                         if isinstance(parsed, dict):
                             return parsed
                     except Exception:
@@ -97,13 +150,20 @@ class ReportService:
         for name in candidate_tools:
             try:
                 result = await self._call_tool_with_retries(name, payload)
-                if isinstance(result, dict) and "file_path" in result:
-                    return str(result["file_path"])
-                if isinstance(result, str):
+                unwrapped = self._unwrap_tool_result(result)
+                if isinstance(unwrapped, dict):
+                    # Accept both 'file_path' and 'path' keys from the MCP server
+                    for key in ("file_path", "path", "filepath"):
+                        if key in unwrapped and unwrapped[key]:
+                            return str(unwrapped[key])
+                if isinstance(unwrapped, str):
+                    # If server returns plain path as text
+                    if os.path.exists(unwrapped):
+                        return unwrapped
                     try:
-                        parsed = json.loads(result)
+                        parsed = json.loads(unwrapped)
                         if isinstance(parsed, dict) and "file_path" in parsed:
-                            return str(parsed["file_path"])
+                            return str(parsed["file_path"]) 
                     except Exception:
                         pass
             except Exception:
@@ -130,7 +190,7 @@ class ReportService:
         target_path = await self._generate_report(data, fmt)
         if not target_path:
             # Fallback: generate simple file locally
-            filename = f"report_{user_id}_{int(dt.datetime.utcnow().timestamp())}.{fmt if fmt != 'excel' else 'xlsx'}"
+            filename = f"report_{user_id}_{int(dt.datetime.now(dt.timezone.utc).timestamp())}.{fmt if fmt != 'excel' else 'xlsx'}"
             target_path = os.path.join(self.storage_path, filename)
             if fmt == "html":
                 with open(target_path, "w", encoding="utf-8") as f:
