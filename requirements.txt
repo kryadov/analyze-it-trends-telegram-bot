@@ -15,3 +15,6 @@ pytz>=2023.3
 aiosqlite>=0.19.0
 asyncpg>=0.29.0
 redis>=5.0.0
+# eMudhra intermediate CA compromise (October 2026): certifi pulled in by the
+# HTTP client must be at least the release that drops those intermediates.
+certifi>=2026.10.19
